@@ -159,7 +159,7 @@ other hosts accumulate until removed explicitly.
 
 | Variable | Default |
 | --- | --- |
-| `OPENCODE_IMAGE` | `opencode:latest` |
+| `OPENCODE_IMAGE` | `opencode:standard` |
 | `OPENCODE_VARIANT` | unset — selects `opencode:<variant>`; `--variant` overrides it |
 | `OPENCODE_VOLUME` | `opencode-data` |
 | `OPENCODE_GITCONFIG` | host `~/.config/git` |

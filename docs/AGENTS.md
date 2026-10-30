@@ -160,8 +160,8 @@ command from the credential file instead.
    make -C opencode build      # or: make -C opencode rebuild (--no-cache)
    ./opencode/opencode         # mounts the current dir at /workspace
    ```
-   Or verify a build without the TUI: `podman run --rm opencode:latest <cmd>`.
+   Or verify a build without the TUI: `podman run --rm opencode:standard <cmd>`.
 
 Launcher knobs (see `opencode/opencode`): `OPENCODE_IMAGE` (default
-`opencode:latest`), `OPENCODE_VOLUME` (default `opencode-data`),
+`opencode:standard`), `OPENCODE_VOLUME` (default `opencode-data`),
 `OPENCODE_GITCONFIG` (default host `~/.config/git`).
