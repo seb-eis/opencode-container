@@ -4,21 +4,65 @@ set -eu
 IMAGE="${OPENCODE_IMAGE:-opencode:latest}"
 VOLUME="${OPENCODE_VOLUME:-opencode-data}"
 GITCONFIG="${OPENCODE_GITCONFIG:-$HOME/.config/git}"
+VARIANT="${OPENCODE_VARIANT:-}"
+
+self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$self")" && pwd)
+
+die() {
+	echo "error: $*" >&2
+	exit 2
+}
+
+# Options are consumed until the first non-option argument; everything from
+# there on is passed to the OpenCode CLI unchanged.
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-v | --variant)
+		[ $# -ge 2 ] || die "$1 needs a variant name"
+		VARIANT="$2"
+		shift 2
+		;;
+	--variant=*)
+		VARIANT="${1#*=}"
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*)
+		break
+		;;
+	esac
+done
+
+if [ -n "$VARIANT" ]; then
+	case "$VARIANT" in
+	*[!a-z0-9-]*) die "invalid variant '$VARIANT' (expected [a-z0-9-])" ;;
+	esac
+	if [ ! -f "$repo_dir/variants/$VARIANT.containerfile" ]; then
+		available=$(ls "$repo_dir"/variants/*.containerfile 2>/dev/null |
+			sed 's#.*/##; s#\.containerfile$##' | tr '\n' ' ')
+		die "unknown variant '$VARIANT' (available: ${available:-none})"
+	fi
+	IMAGE="opencode:$VARIANT"
+fi
 
 if [ ! -d "$GITCONFIG" ]; then
-  mkdir -p "$GITCONFIG"
-  chmod 700 "$GITCONFIG"
+	mkdir -p "$GITCONFIG"
+	chmod 700 "$GITCONFIG"
 fi
 
 exec podman run --rm -it \
-  --init \
-  --userns=keep-id \
-  --cap-drop=ALL \
-  --security-opt=no-new-privileges \
-  -v "$(pwd):/workspace:Z" \
-  -v "${VOLUME}:/home/node/.local/share/opencode:U" \
-  -v "${GITCONFIG}:/home/node/.config/git:Z" \
-  -e GIT_CONFIG_GLOBAL=/home/node/.config/git/config \
-  --tmpfs /home/node/.local/share/opencode/snapshot:rw,mode=1777 \
-  -w /workspace \
-  "$IMAGE" "$@"
+	--init \
+	--userns=keep-id \
+	--cap-drop=ALL \
+	--security-opt=no-new-privileges \
+	-v "$(pwd):/workspace:Z" \
+	-v "${VOLUME}:/home/node/.local/share/opencode:U" \
+	-v "${GITCONFIG}:/home/node/.config/git:Z" \
+	-e GIT_CONFIG_GLOBAL=/home/node/.config/git/config \
+	--tmpfs /home/node/.local/share/opencode/snapshot:rw,mode=1777 \
+	-w /workspace \
+	"$IMAGE" "$@"

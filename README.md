@@ -36,9 +36,14 @@ nothing under `/home/node` is root-owned.
 ## Run
 
 ```sh
-./opencode                    # mounts the current directory at /workspace
-./opencode <command> [...]    # run a single command instead of the TUI
+./opencode                     # mounts the current directory at /workspace
+./opencode --variant minimal   # run the minimal variant instead of the full image
+./opencode <command> [...]     # run a single command instead of the TUI
 ```
+
+Options are parsed only up to the first non-option argument, so anything after the
+command (`./opencode run "explain this repo"`) goes straight to the CLI; `--` stops
+option parsing explicitly.
 
 What the launcher mounts and sets:
 
@@ -105,9 +110,20 @@ overkill:
 | `variants/minimal.containerfile` | System CLI tools only — no language toolchain beyond the Node runtime the CLI itself needs | `make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal` |
 | `variants/python.containerfile` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python` |
 
-Run one with `OPENCODE_IMAGE=opencode:minimal ./opencode` (or `:python`). Each
-variant is standalone, so it can drift from the main `containerfile` — keep the
-pinned OpenCode version in sync when you upgrade.
+Run one by name — `--variant` (or `-v`) selects the `opencode:<name>` image, which
+must be built first:
+
+```sh
+make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal
+./opencode --variant minimal
+
+make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python
+./opencode -v python
+```
+
+`OPENCODE_VARIANT=minimal` does the same; an explicit `--variant` wins over both it
+and `OPENCODE_IMAGE`. Each variant is standalone, so it can drift from the main
+`containerfile` — keep the pinned OpenCode version in sync when you upgrade.
 
 ## GitHub token
 
@@ -139,6 +155,7 @@ other hosts accumulate until removed explicitly.
 | Variable | Default |
 | --- | --- |
 | `OPENCODE_IMAGE` | `opencode:latest` |
+| `OPENCODE_VARIANT` | unset — selects `opencode:<variant>`; `--variant` overrides it |
 | `OPENCODE_VOLUME` | `opencode-data` |
 | `OPENCODE_GITCONFIG` | host `~/.config/git` |
 
