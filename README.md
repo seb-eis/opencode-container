@@ -36,8 +36,7 @@ Three variants are provided in `variants/`, each with the same launcher contract
 | Variant | Contains | Build |
 | --- | --- | --- |
 | `standard` (default) | Full toolchain: rustup, .NET SDK, ruff, Node + OpenCode CLI | `make build` |
-| `minimal` | System CLI tools only — `git`, `rg`, `fd`, `jq`, `sqlite3`, `tree`, \
-  `less`, `procps`, `curl`, plus the Node runtime the CLI needs | `make build VARIANT=minimal` |
+| `minimal` | System CLI tools only — `git`, `rg`, `fd`, `jq`, `sqlite3`, `tree`, `less`, `procps`, `curl`, plus the Node runtime the CLI needs | `make build VARIANT=minimal` |
 | `python` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build VARIANT=python` |
 
 Each variant maps to the `opencode:<name>` tag: `opencode:standard`,
@@ -186,51 +185,6 @@ exercise the whole chain.
 | `~/.config/git` | Host `~/.config/git` bind mount — yes (global git config + credentials). |
 | `~/.local/share/opencode/snapshot` | tmpfs, mode `1777` — **wiped every run**. Do not store anything needed later. |
 | `/`, `/tmp`, rest of `$HOME` | Container‑local — lost on exit. |
-
-## Gotchas
-
-- **No sudo.** Install per-user only: `npm i -g` (→ `~/.local`), `pip --user`/venv,
-  `rustup`, `dotnet-install.sh --install-dir "$DOTNET_ROOT"`.
-- **Do not write to `opencode.db`.** It is a live SQLite DB owned by the running
-  OpenCode service; writes can corrupt sessions. Read‑only queries with
-  `sqlite3 -readonly` are OK.
-- **Never create root‑owned files under `/home/node`.** The image build ends with
-  `test -z "$(find /home/node -user root -print -quit)"` and will fail.
-- **Global git config is host‑backed.** `~/.config/git` is bind‑mounted from the
-  host (override with `OPENCODE_GITCONFIG`), and `GIT_CONFIG_GLOBAL` points at it,
-  so `git config --global` persists across runs. Identity is set to
-  `Sebastian Eisele <sebastian.eisele@rwth-aachen.de>`; commits are authored as
-  that, so do not change it unless asked. Credentials live in
-  `~/.config/git/credentials` — see [Secrets](#secrets). Never store tokens in
-  `/workspace`.
-- **Pushing needs consent.** Never push to `main` or to a branch you did not create
-  yourself without asking first — see [Pushing and branches](#pushing-and-branches).
-- **Secrets are one `cat` away from permanent.** Anything printed reaches the
-  transcript, `~/.local/share/opencode/shell/<project>/` and `opencode.db`. Read
-  [Secrets](#secrets) before touching a token, key, or password.
-- `~/.local/share/opencode/shell/<project>/` and `tool-output/` contain captured
-  shell output from earlier sessions; treat as logs, not source — and remember
-  they may already contain pasted secrets.
-
-## Pushing and branches
-
-A push is the one git action that is hard to take back, so treat it as requiring
-consent:
-
-- **Never push to `main`** (or any other long‑lived or shared branch) unless the
-  user asked for that push in the current conversation. An earlier "publish this"
-  does not cover later commits.
-- **Never push to a branch you did not create yourself** — including branches you
-  merely checked out, remote‑tracking branches, and branches belonging to a PR.
-- Pushing to a branch you created in this session, other than `main`, is fine.
-- **If in doubt, prompt.** Always prompt for: force‑push (`--force`,
-  `--force-with-lease`), deleting or renaming a remote branch, pushing tags,
-  rewriting published history, or changing a repository's visibility.
-- Preferred shape: `git switch -c agent/<topic>`, commit, push that branch, then
-  offer a PR instead of touching `main`.
-
-Local commits are fine; the gate is on `git push` and anything that lands on a
-remote (`gh pr merge`, `gh release create`, API writes).
 
 ## Changing the image
 
