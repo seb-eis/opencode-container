@@ -64,12 +64,34 @@ gcc/g++/gdb/make, strace, ltrace, pkg-config, tree
   that, so do not change it unless asked. Credentials live in
   `~/.config/git/credentials` — see [Secrets](#secrets). Never store tokens in
   `/workspace`.
+- **Pushing needs consent.** Never push to `main` or to a branch you did not create
+  yourself without asking first — see [Pushing and branches](#pushing-and-branches).
 - **Secrets are one `cat` away from permanent.** Everything printed is captured in
   the transcript, `~/.local/share/opencode/shell/<project>/` and `opencode.db`.
   Read [Secrets](#secrets) before touching a token, key, or password.
 - `~/.local/share/opencode/shell/<project>/` and `tool-output/` contain captured
   shell output from earlier sessions; treat as logs, not source — and remember
   they may already contain pasted secrets.
+
+## Pushing and branches
+
+A push is the one git action that is hard to take back, so treat it as requiring
+consent:
+
+- **Never push to `main`** (or any other long-lived or shared branch) unless the
+  user asked for that push in the current conversation. An earlier "publish this"
+  does not cover later commits.
+- **Never push to a branch you did not create yourself** — including branches you
+  merely checked out, remote-tracking branches, and branches belonging to a PR.
+- Pushing to a branch you created in this session, other than `main`, is fine.
+- **If in doubt, prompt.** Always prompt for: force-push (`--force`,
+  `--force-with-lease`), deleting or renaming a remote branch, pushing tags,
+  rewriting published history, or changing a repository's visibility.
+- Preferred shape: `git switch -c agent/<topic>`, commit, push that branch, then
+  offer a PR instead of touching `main`.
+
+Local commits are fine; the gate is on `git push` and anything that lands on a
+remote (`gh pr merge`, `gh release create`, API writes).
 
 ## Secrets
 
