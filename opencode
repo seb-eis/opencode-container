@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+IMAGE="${OPENCODE_IMAGE:-opencode:latest}"
+VOLUME="${OPENCODE_VOLUME:-opencode-data}"
+GITCONFIG="${OPENCODE_GITCONFIG:-$HOME/.config/git}"
+
+if [ ! -d "$GITCONFIG" ]; then
+  mkdir -p "$GITCONFIG"
+  chmod 700 "$GITCONFIG"
+fi
+
+exec podman run --rm -it \
+  --init \
+  --userns=keep-id \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -v "$(pwd):/workspace:Z" \
+  -v "${VOLUME}:/home/node/.local/share/opencode:U" \
+  -v "${GITCONFIG}:/home/node/.config/git:Z" \
+  -e GIT_CONFIG_GLOBAL=/home/node/.config/git/config \
+  --tmpfs /home/node/.local/share/opencode/snapshot:rw,mode=1777 \
+  -w /workspace \
+  "$IMAGE" "$@"
