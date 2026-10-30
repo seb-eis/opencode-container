@@ -50,8 +50,48 @@ What the launcher mounts and sets:
 
 The container runs with `--userns=keep-id`, `--cap-drop=ALL`,
 `--security-opt=no-new-privileges` and `--init`. There is no sudo and no setuid
-escalation; install extra tools with `npm i -g` (into `~/.local`), `pip --user`,
-`rustup` or `dotnet-install.sh`.
+escalation; for a one-off, install per-user with `npm i -g` (into `~/.local`),
+`pip --user`, `rustup` or `dotnet-install.sh`. Anything you want to keep belongs in
+the image instead — see [Upgrade or add tools](#upgrade-or-add-tools).
+
+## Upgrade or add tools
+
+The image is the source of truth for the toolchain — change it in the repository,
+not by installing into a running container (it is `--rm`, so ad-hoc installs are
+lost). The loop is:
+
+1. Start the wrapper from the repository root, so the repository itself is mounted
+   at `/workspace`:
+
+   ```sh
+   ./opencode
+   ```
+
+2. Prompt OpenCode to integrate the change in the repository: adjust the
+   `containerfile` (bump a pinned version, extend the `apt-get` list, add a step
+   and its check in the `USER node` verification block) and update
+   `docs/AGENTS.md` and this README to match.
+
+3. Exit the container and rebuild:
+
+   ```sh
+   make rebuild
+   ```
+
+4. Start the wrapper again and prompt OpenCode for a self health check, using the
+   repository as the source of truth: every command in the verification block must
+   run as `node`, the pinned versions in `containerfile` and `docs/AGENTS.md` must
+   agree, and the "no root-owned files under `/home/node`" guard must pass.
+
+Example prompts:
+
+- "Bump ruff to 0.18.0: update the containerfile pin, the verification block, and
+  the version list in docs/AGENTS.md."
+- "Health check this image: run everything in the `USER node` verification block
+  as the runtime user and report any mismatch with docs/AGENTS.md."
+
+`make build` reuses cached layers, so use `make rebuild` after tool changes to
+exercise the whole chain.
 
 ## GitHub token
 
