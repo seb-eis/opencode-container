@@ -81,7 +81,8 @@ lost). The loop is:
 3. Exit the container and rebuild:
 
    ```sh
-   make rebuild
+   make rebuild                  # always rebuilds the default (standard) image
+   make rebuild VARIANT=minimal  # or any other variant
    ```
 
 4. Start the wrapper again and prompt OpenCode for a self health check, using the
@@ -97,7 +98,9 @@ Example prompts:
   as the runtime user and report any mismatch with docs/AGENTS.md."
 
 `make build` reuses cached layers, so use `make rebuild` after tool changes to
-exercise the whole chain.
+exercise the whole chain.  `make build VARIANT=<name>` selects a variant (e.g.
+`minimal`, `python`, `standard`); the default when `VARIANT` is omitted is
+`standard`.
 
 ## Variants
 
