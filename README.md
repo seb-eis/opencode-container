@@ -9,7 +9,7 @@ installed per-user.
 | Path | Purpose |
 | --- | --- |
 | `containerfile` | Image build: Debian 13 (trixie), Node 22, rustup, .NET SDK, ruff, OpenCode CLI |
-| `makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token` |
+| `makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token`; add `VARIANT=<name>` to build a variant |
 | `install-token.sh` | Stores/rotates a GitHub token in the persistent credential file |
 | `opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
 | `variants/*.containerfile` | Reduced images: system tools only, or Python only |
@@ -107,23 +107,28 @@ overkill:
 
 | Variant | Contains | Build |
 | --- | --- | --- |
-| `variants/minimal.containerfile` | System CLI tools only — no language toolchain beyond the Node runtime the CLI itself needs | `make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal` |
-| `variants/python.containerfile` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python` |
+| `variants/minimal.containerfile` | System CLI tools only — no language toolchain beyond the Node runtime the CLI itself needs | `make build VARIANT=minimal` |
+| `variants/python.containerfile` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build VARIANT=python` |
 
 Run one by name — `--variant` (or `-v`) selects the `opencode:<name>` image, which
 must be built first:
 
 ```sh
-make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal
+make build VARIANT=minimal
 ./opencode --variant minimal
 
-make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python
+make build VARIANT=python
 ./opencode -v python
 ```
 
-`OPENCODE_VARIANT=minimal` does the same; an explicit `--variant` wins over both it
-and `OPENCODE_IMAGE`. Each variant is standalone, so it can drift from the main
-`containerfile` — keep the pinned OpenCode version in sync when you upgrade.
+`VARIANT` only needs the name: it resolves to
+`-f variants/<name>.containerfile -t opencode:<name>` for `build`, `rebuild` and
+`clean`. It is a make argument, not an environment variable, and is mutually
+exclusive with `CONTAINERFILE`; `CONTAINERFILE=some/path` still works on its own for
+an arbitrary file. `OPENCODE_VARIANT=minimal` does the same for the launcher; an
+explicit `--variant` wins over both it and `OPENCODE_IMAGE`. Each variant is
+standalone, so it can drift from the main `containerfile` — keep the pinned
+OpenCode version in sync when you upgrade.
 
 ## GitHub token
 
