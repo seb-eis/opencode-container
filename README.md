@@ -12,6 +12,7 @@ installed per-user.
 | `makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token` |
 | `install-token.sh` | Stores/rotates a GitHub token in the persistent credential file |
 | `opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
+| `variants/*.containerfile` | Reduced images: system tools only, or Python only |
 | `docs/AGENTS.md` | Notes for agent runs inside the container (runtime, persistence, secret handling) |
 
 ## Requirements
@@ -92,6 +93,21 @@ Example prompts:
 
 `make build` reuses cached layers, so use `make rebuild` after tool changes to
 exercise the whole chain.
+
+## Variants
+
+`variants/` holds smaller containerfiles with the same launcher contract (user
+`node`, `/workspace`, `ENTRYPOINT opencode`), for when the full toolchain image is
+overkill:
+
+| Variant | Contains | Build |
+| --- | --- | --- |
+| `variants/minimal.containerfile` | System CLI tools only — no language toolchain beyond the Node runtime the CLI itself needs | `make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal` |
+| `variants/python.containerfile` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python` |
+
+Run one with `OPENCODE_IMAGE=opencode:minimal ./opencode` (or `:python`). Each
+variant is standalone, so it can drift from the main `containerfile` — keep the
+pinned OpenCode version in sync when you upgrade.
 
 ## GitHub token
 
