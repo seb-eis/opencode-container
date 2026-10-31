@@ -151,9 +151,7 @@ lost). The loop is:
    `docs/AGENTS.md` and this README to match. If you have added or changed tools
    that do not fit the existing variants, you can prompt to create a new named
    variant with its own `containerfile` using the VARIANT mechanism:
-   ```sh
    make build VARIANT=<new-name>
-   ```
 3. Exit the container and rebuild:
    ```sh
    make rebuild                  # default (standard) image
