@@ -73,10 +73,12 @@ still works on its own.
 
 ## Launcher (`opencode`)
 
-The launcher script (`opencode` at the repository root) resolves the image and
-mounts the repository at `/workspace`. It parses options until the first
-non‑option argument, so subcommands (`./opencode run "…"`, `./opencode serve`)
-pass through unchanged; `--` stops option parsing explicitly.
+The launcher script (`opencode`) resolves the image and mounts the current working
+directory at `/workspace`. It does not require being run from the repository root —
+any directory will work, and the repository at that location becomes the mounted
+`/workspace`. It parses options until the first non‑option argument, so subcommands
+(`./opencode run "…"`, `./opencode serve`) pass through unchanged; `--` stops option
+parsing explicitly.
 
 ### Variant selection
 
