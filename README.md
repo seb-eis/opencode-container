@@ -68,8 +68,7 @@ still works on its own.
 | `make rebuild` | Builds with `--no-cache`, exercising the whole chain. |
 | `make rebuild VARIANT=<name>` | Builds a variant without cache. |
 | `make clean VARIANT=<name>` | `podman image rm -f opencode:<name>`. |
-| `make install-token` | Prompts for a GitHub username and token, verifies it against
-  `api.github.com`, and writes it to `${OPENCODE_GITCONFIG:-~/.config/git}/credentials`. |
+| `make install-token` | Prompts for a GitHub username and token, verifies it against `api.github.com`, and writes it to `.config/git/credentials`. 
 
 ## Launcher (`opencode`)
 
