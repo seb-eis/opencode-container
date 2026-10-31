@@ -2,14 +2,15 @@
 #!/bin/sh
 set -eu
 
-IMAGE="${OPENCODE_IMAGE:-opencode:standard}"
-VOLUME="${OPENCODE_VOLUME:-opencode-data}"
-GITCONFIG="${OPENCODE_GITCONFIG:-$HOME/.config/git}"
-VARIANT="${OPENCODE_VARIANT:-}"
-SECRET_NAME="openai_api_key"
-
+# get container repo location
 self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$self")" && pwd)
+
+IMAGE="${OPENCODE_IMAGE:-opencode:standard}"
+VOLUME="${OPENCODE_VOLUME:-opencode-data}"
+USERCONFIG="${OPENCODE_USERCONFIG:-$repo_dir/.config/}"
+VARIANT="${OPENCODE_VARIANT:-}"
+SECRET_NAME="openai_api_key"
 
 die() {
 	echo "error: $*" >&2
@@ -53,9 +54,9 @@ if [ -n "$VARIANT" ]; then
 	IMAGE="opencode:$VARIANT"
 fi
 
-if [ ! -d "$GITCONFIG" ]; then
-	mkdir -p "$GITCONFIG"
-	chmod 700 "$GITCONFIG"
+if [ ! -d "$USERCONFIG" ]; then
+	mkdir -p "$USERCONFIG"
+	chmod 700 "$USERCONFIG"
 fi
 
 # Run the container with the secret and configuration mount only
@@ -71,7 +72,7 @@ run_container() {
 			--security-opt=no-new-privileges \
 			-v "$(pwd):/workspace:Z" \
 			-v "${VOLUME}:/home/node/.local/share/opencode:U" \
-			-v "${GITCONFIG}:/home/node/.config/git:Z" \
+			-v "${USERCONFIG}:/home/node/.config:Z" \
 			-v "$repo_dir/opencode.json:/home/node/.config/opencode/opencode.json:ro,Z" \
 			-e GIT_CONFIG_GLOBAL=/home/node/.config/git/config \
 			--secret "$SECRET_NAME" \
@@ -89,7 +90,7 @@ run_container() {
 		--security-opt=no-new-privileges \
 		-v "$(pwd):/workspace:Z" \
 		-v "${VOLUME}:/home/node/.local/share/opencode:U" \
-		-v "${GITCONFIG}:/home/node/.config/git:Z" \
+		-v "${USERCONFIG}:/home/node/.config:Z" \
 		-e GIT_CONFIG_GLOBAL=/home/node/.config/git/config \
 		--tmpfs /home/node/.local/share/opencode/snapshot:rw,mode=1777 \
 		-w /workspace \

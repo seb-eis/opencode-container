@@ -20,6 +20,9 @@ id_ed25519*
 .env.*
 service.json
 
+# Never commit shared configuration
+.config
+
 # Local overrides
 makefile.local
 *.local

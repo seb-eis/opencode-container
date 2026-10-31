@@ -1,5 +1,5 @@
 #!/bin/sh
-# Store a GitHub token for git/gh in the credential helper file.
+# Store a GitHub token for git/gh in the credential helper file of the local repo.
 #
 # Usage:  make install-token [GITHUB_USER=<login>] [GITHUB_TOKEN=<token>]
 #
@@ -8,7 +8,11 @@
 # only format `git credential-store` can read back.
 set -eu
 
-CREDENTIALS="${GITCONFIG:-$HOME/.config/git}/credentials"
+# get container repo location
+self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$self")" && pwd)
+
+CREDENTIALS="${GITCONFIG:-$repo_dir/.config/git}/credentials"
 user="${GITHUB_USER:-}"
 token="${GITHUB_TOKEN:-}"
 
