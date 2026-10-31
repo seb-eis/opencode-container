@@ -191,7 +191,7 @@ exercise the whole chain.
 | `~/.local/share/opencode/snapshot` | tmpfs, mode `1777` — **wiped every run**. Do not store anything needed later. |
 | `/`, `/tmp`, rest of `$HOME` | Container‑local — lost on exit. |
 
-## Changing an image or adding a variant
+## Changing the image
 
 1. Edit `opencode/containerfile` (or `variants/<name>.containerfile` for a
    variant). Keep pinned versions (opencode 2.2.4, ruff 0.17.3, rust 1.99.1,
@@ -206,28 +206,6 @@ exercise the whole chain.
    ./opencode/opencode         # mounts the current dir at /workspace
    ```
    Or verify a build without the TUI: `podman run --rm opencode:standard <cmd>`.
-
-4. If you have added or changed tools, you can prompt to create a new named
-   variant (or update an existing one) using the same `VARIANT` mechanism:
-
-   ```sh
-   make build VARIANT=<new-name>
-   ```
-
-   The makefile will validate the name, resolve it to
-   `-f variants/<name>.containerfile -t opencode:<name>`, and the launcher will
-   pick up the new image on the next `./opencode` invocation. The variant is
-   standalone, so it can drift from the main `containerfile` — keep the pinned
-   OpenCode version in sync when you upgrade.
-
-5. Run the new variant:
-   ```sh
-   ./opencode --variant <new-name>
-   ```
-
-   Or set `OPENCODE_VARIANT=<new-name>` in the environment.
-4. Extend the `launcher knobs` table in this README if you add new environment
-   variables.
 
 ## License
 
