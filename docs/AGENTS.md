@@ -79,6 +79,9 @@ gcc/g++/gdb/make, strace, ltrace, pkg-config, tree, less, procps
   location.
 - **Pushing needs consent.** Never push to `main` or to a branch you did not create
   yourself without asking first — see [Pushing and branches](#pushing-and-branches).
+- **Never print or expose the mounted git credentials.** Do not `cat`, grep,
+  search, copy, or otherwise read `.config/git/credentials` into the transcript,
+  shell logs, or any tool output — see [Secrets](#secrets).
 - **Secrets are one `cat` away from permanent.** Everything printed is captured in
   the transcript, `~/.local/share/opencode/shell/<project>/` and `opencode.db`.
   Read [Secrets](#secrets) before touching a token, key, or password.
@@ -111,6 +114,14 @@ remote (`gh pr merge`, `gh release create`, API writes).
 Treat every secret as already logged. Anything that reaches stdout/stderr lands in
 the transcript, in `~/.local/share/opencode/shell/<project>/` and in
 `opencode.db`; there is no "just this once".
+
+**Never print, read, or otherwise expose the mounted git credentials.** The file
+`<repo>/.config/git/credentials` (mounted at `~/.config/git/credentials`) must
+not be `cat`ed, grepped, searched, copied, hashed, or passed to any command whose
+output could enter the context. Do not use recursive searches or shell globs that
+may match it. If a check is unavoidable, use `git credential fill` and print only
+a boolean or a short prefix. If it is exposed, treat the token as compromised:
+revoke it on GitHub, then rotate it with `make -C opencode install-token`.
 
 | Secret | Where it lives | Notes |
 | --- | --- | --- |
