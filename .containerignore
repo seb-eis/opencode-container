@@ -1,0 +1,7 @@
+# Keep credentials and repository metadata out of the podman build context.
+# base.containerfile copies only scripts/, but podman archives the whole context
+# before building, so anything listed here is never transmitted.
+.config/
+.git/
+makefile.local
+*.local

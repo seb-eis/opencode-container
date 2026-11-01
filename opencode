@@ -9,6 +9,7 @@ IMAGE="${OPENCODE_IMAGE:-opencode:standard}"
 VOLUME="${OPENCODE_VOLUME:-opencode-data}"
 USERCONFIG="${OPENCODE_USERCONFIG:-$repo_dir/.config/}"
 VARIANT="${OPENCODE_VARIANT:-}"
+BASE_VARIANT="base"
 SECRET_NAME="openai_api_key"
 
 die() {
@@ -44,9 +45,14 @@ if [ -n "$VARIANT" ]; then
 	*[!a-z0-9-]*) die "invalid variant '$VARIANT' (expected [a-z0-9-])" ;;
 	esac
 
+	if [ "$VARIANT" = "$BASE_VARIANT" ]; then
+		die "variant '$BASE_VARIANT' is reserved for the shared base image; build it with 'make base'"
+	fi
+
 	if [ ! -f "$repo_dir/variants/$VARIANT.containerfile" ]; then
 		available=$(ls "$repo_dir"/variants/*.containerfile 2>/dev/null |
-			sed 's#.*/##; s#\.containerfile$##' | tr '\n' ' ')
+			sed 's#.*/##; s#\.containerfile$##' |
+			grep -vx "$BASE_VARIANT" | tr '\n' ' ')
 		die "unknown variant '$VARIANT' (available: ${available:-none})"
 	fi
 

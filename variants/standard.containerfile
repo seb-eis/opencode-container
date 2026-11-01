@@ -1,28 +1,21 @@
-FROM node:22-trixie-slim
+# Standard variant: shared base plus the full polyglot toolchain.
+#
+# Build: make build            (default)
+# Run:   ./opencode
 
-ENV HOME=/home/node \
-    LANG=C.UTF-8 \
-    CARGO_HOME=/home/node/.cargo \
-    RUSTUP_HOME=/home/node/.rustup \
-    NPM_CONFIG_PREFIX=/home/node/.local \
-    DOTNET_ROOT=/home/node/.dotnet \
-    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    DOTNET_NOLOGO=1 \
-    PATH="/home/node/.local/bin:/home/node/.cargo/bin:/home/node/.dotnet:${PATH}"
+ARG BASE_IMAGE=opencode:base
+FROM ${BASE_IMAGE}
 
 # --------------------------------------------------
-# System packages (no .NET tooling here)
+# Build tools, debuggers and Python (no .NET tooling here)
 # --------------------------------------------------
+USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bash ca-certificates curl git ripgrep fd-find jq sqlite3 less procps \
         build-essential gdb pkg-config strace ltrace \
         python3 python3-pip python3-venv \
-        tree \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-RUN ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
 # --------------------------------------------------
 # OS-level native libraries required by the .NET runtime.
@@ -42,19 +35,19 @@ RUN mkdir -p \
     /home/node/.cargo \
     /home/node/.rustup \
     /home/node/.dotnet \
-    /home/node/.config/opencode \
-    /home/node/.local/bin \
-    /home/node/.local/share/opencode \
-    /home/node/.local/share/opencode/snapshot \
-    /home/node/.cache \
-    /workspace \
-    /tmp/opencode \
-    && chown -R node:node /home/node /workspace /tmp/opencode
+    && chown -R node:node /home/node/.cargo /home/node/.rustup /home/node/.dotnet
 
 # --------------------------------------------------
 # Everything below runs as the runtime user
 # --------------------------------------------------
 USER node
+
+ENV CARGO_HOME=/home/node/.cargo \
+    RUSTUP_HOME=/home/node/.rustup \
+    DOTNET_ROOT=/home/node/.dotnet \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    PATH="/home/node/.cargo/bin:/home/node/.dotnet:${PATH}"
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain 1.99.1
@@ -72,22 +65,10 @@ RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && rm -f /tmp/dotnet-install.sh \
     && dotnet --version
 
-# Install as node into ~/.local (already first on PATH).
-# Cache lives in /tmp and is deleted, so no ~/.npm in the image.
-RUN npm install --global --cache /tmp/npm-cache @opencode/cli@2.2.4 \
-    && rm -rf /tmp/npm-cache
-
 # --------------------------------------------------
 # Verification as the actual runtime user
 # --------------------------------------------------
 RUN set -eux; \
-    git --version; \
-    rg --version; \
-    fd --version; \
-    jq --version; \
-    sqlite3 --version; \
-    less --version; \
-    ps --version; \
     gcc --version; \
     gdb --version; \
     pkg-config --version; \
@@ -102,19 +83,12 @@ RUN set -eux; \
     rustc --version; \
     cargo --version; \
     rustup --version; \
-    opencode --version; \
-    test -w /home/node/.config/opencode; \
-    test -w /home/node/.local/share/opencode; \
-    test -w /home/node/.local/share/opencode/snapshot; \
     tmp="$(mktemp -d)"; \
-    npm install --cache /tmp/npm-cache --prefix "$tmp" cowsay >/dev/null; \
-    "$tmp/node_modules/.bin/cowsay" -t ok >/dev/null; \
-    rm -rf "$tmp" /tmp/npm-cache; \
-    python3 -m venv /tmp/venv-probe; \
-    /tmp/venv-probe/bin/python -c 'import sys; print(sys.version.split()[0])'; \
-    rm -rf /tmp/venv-probe
+    trap 'rm -rf "$tmp"' EXIT; \
+    python3 -m venv "$tmp/venv"; \
+    "$tmp/venv/bin/python" -c 'import sys; print(sys.version.split()[0])'
 
-# Guard: root must not own anything in the runtime user's home
+# Guard: root must not own anything in the runtime user's home.
 RUN test -z "$(find /home/node -user root -print -quit)"
 
 WORKDIR /workspace

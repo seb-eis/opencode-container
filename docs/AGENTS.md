@@ -12,10 +12,14 @@ copy:
 
 | Path | Purpose |
 | --- | --- |
-| `opencode/variants/standard.containerfile` | Default image: Debian 13, Node 22, full toolchain |
-| `opencode/variants/minimal.containerfile` | System CLI tools + Node/OpenCode only |
-| `opencode/variants/python.containerfile` | Minimal + Python 3 |
-| `opencode/makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token`; selects a variant with `VARIANT=<name>` |
+| `opencode/variants/base.containerfile` | Shared base: common system setup for every variant (not user-selectable) |
+| `opencode/variants/standard.containerfile` | Default variant: shared base + full toolchain |
+| `opencode/variants/minimal.containerfile` | Shared base only |
+| `opencode/variants/python.containerfile` | Shared base + Python 3 |
+| `opencode/scripts/verify-common.sh` | Common health check run by the base build and `make check` |
+| `opencode/scripts/check-variants.sh` | Builds each runnable variant and runs the common health check (used by `make check`) |
+| `opencode/.containerignore` | Keeps `.config/`, `.git/` out of the podman build context |
+| `opencode/makefile` | `make build`/`rebuild` (base + variant), `make base`, `make clean`, `make lint`, `make check`, `make install-token`; selects a variant with `VARIANT=<name>` |
 | `opencode/install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
 | `opencode/opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
 | `opencode/opencode.json` | Maps the OpenAI provider to the `openai_api_key` podman secret; mounted read-only when the secret exists |
@@ -177,20 +181,24 @@ command from the credential file instead.
 
 ## Changing the image
 
-1. Edit `opencode/variants/standard.containerfile` (or `minimal`/`python`). Keep
-   pinned versions (opencode 2.2.4, ruff 0.17.3, rust 1.99.1, dotnet 10.0.403)
-   unless the task is to upgrade.
-2. Extend the `USER node` verification block when adding a tool — every new
-   binary should be exercised as the runtime user, not root.
+1. Common packages and system setup go in `opencode/variants/base.containerfile`;
+   variant-specific toolchains go in `opencode/variants/<name>.containerfile`.
+   Keep pinned versions (opencode 2.2.4, ruff 0.17.3, rust 1.99.1,
+   dotnet 10.0.403) unless the task is to upgrade.
+2. Add common checks to `opencode/scripts/verify-common.sh`; add variant-specific
+   checks to the `USER node` verification block in that variant. Every new binary
+   should be exercised as the runtime user, not root.
 3. Build and test:
    ```sh
-   make -C opencode build                  # or: make -C opencode rebuild (--no-cache)
-   make -C opencode build VARIANT=minimal  # any other variant
+   make -C opencode lint                   # every variant must build FROM ${BASE_IMAGE}
+   make -C opencode build                  # base + default (standard)
+   make -C opencode build VARIANT=minimal  # base + any other variant
+   make -C opencode check                  # common health check in every variant
    cd opencode && ./opencode               # mounts the repo at /workspace
    ```
    Or verify a build without the TUI: `podman run --rm opencode:standard <cmd>`.
    `VARIANT=<name>` is the only way to select a containerfile; `CONTAINERFILE=`
-   is no longer supported.
+   is no longer supported, and `base` is reserved for the shared base image.
 
 Launcher knobs (see `opencode/opencode`): `OPENCODE_IMAGE` (default
 `opencode:standard`, used only when no variant is selected), `OPENCODE_VARIANT`

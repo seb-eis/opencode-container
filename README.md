@@ -25,27 +25,32 @@ required; language toolchains are installed per-user inside the image.
 
 ### Default image (standard)
 
-The default variant includes the full toolchain: Debian 13 (trixie), Node 22,
-rustup, .NET SDK 10.0.403, Python 3, pip/venv, ruff, gcc/g++, gdb, strace,
-ltrace, pkg-config, and the OpenCode CLI.
+The default variant is the shared base plus the full toolchain: rustup, .NET SDK
+10.0.403, Python 3, pip/venv, ruff, gcc/g++, gdb, strace, ltrace, pkg-config, and
+the OpenCode CLI. The base itself provides Debian 13 (trixie), Node 22, and the
+common system tools.
 
-### Variants
+### Variants and the shared base
 
-Three variants are provided in `variants/`, each with the same launcher contract
-(`USER node`, `/workspace`, `ENTRYPOINT opencode`):
+The common system setup lives in `variants/base.containerfile` exactly once. It
+is not a user-selectable variant: every runnable variant builds `FROM
+${BASE_IMAGE}` (`opencode:base`) and adds only its own toolchain. All images share
+the same launcher contract (`USER node`, `/workspace`, `ENTRYPOINT opencode`).
 
-| Variant | Contains | Build |
+| Containerfile | Contains | Build |
 | --- | --- | --- |
-| `standard` (default) | Full toolchain: rustup, .NET SDK, Python 3, ruff, compilers/debuggers, Node + OpenCode CLI | `make build` |
-| `minimal` | System CLI tools only — `git`, `rg`, `fd`, `jq`, `sqlite3`, `tree`, `less`, `procps`, `curl`, plus the Node runtime the CLI needs | `make build VARIANT=minimal` |
-| `python` | Minimal plus Python 3 (`python3`, `pip`, `venv`) | `make build VARIANT=python` |
+| `base` | Shared base: Debian 13, Node 22, common CLI tools, OpenCode CLI. Not selectable | `make base` |
+| `standard` (default) | Base + rustup, .NET SDK, Python 3, ruff, compilers/debuggers | `make build` |
+| `minimal` | Base only | `make build VARIANT=minimal` |
+| `python` | Base + Python 3 (`python3`, `pip`, `venv`) | `make build VARIANT=python` |
 
 Each variant maps to the `opencode:<name>` tag (or `<IMAGE_NAME>:<name>` if
 `IMAGE_NAME` is set): `opencode:standard`, `opencode:minimal`, `opencode:python`.
-Build a variant first, then run it:
+`base` is reserved: `VARIANT=base` is rejected by `make` and `--variant base` is
+rejected by the launcher. Build a variant first, then run it:
 
 ```sh
-make build VARIANT=minimal       # -f variants/minimal.containerfile -t opencode:minimal
+make build VARIANT=minimal       # builds opencode:base, then opencode:minimal
 ./opencode --variant minimal     # runs the minimal image
 ```
 
@@ -61,15 +66,20 @@ variant names. `VARIANT` is the only way to select a containerfile —
 - `OPENCODE_IMAGE=opencode:custom` is used only when no variant is selected.
 - The name must match `variants/<name>.containerfile`; path traversal (e.g.
   `-v ../x`) is rejected.
+- `base` is reserved for the shared base image and cannot be selected.
 
 ## Build system
 
 | Target | Description |
 | --- | --- |
-| `make build` | Builds the default `standard` image (cached layers). |
-| `make rebuild` | Builds with `--no-cache`, exercising the whole chain. |
-| `make rebuild VARIANT=<name>` | Builds a variant without cache. |
+| `make build` | Builds `opencode:base`, then the default `standard` image (cached layers). |
+| `make rebuild` | Rebuilds the base and the selected variant with `--no-cache`. |
+| `make rebuild VARIANT=<name>` | Rebuilds the base and that variant without cache. |
+| `make base` / `make rebuild-base` | Builds / rebuilds the shared `opencode:base` image. |
 | `make clean VARIANT=<name>` | `podman image rm -f opencode:<name>`. |
+| `make clean-base` | `podman image rm -f opencode:base`. |
+| `make lint` | Checks that every runnable variant builds `FROM ${BASE_IMAGE}`. |
+| `make check` | Builds the base and each variant, then runs the common health check inside every image. |
 | `make install-token` | Prompts for a GitHub username and token, verifies it against `api.github.com`, and writes it to `$GITCONFIG/credentials` (default `<repo>/.config/git/credentials`). |
 
 `make` with no target is equivalent to `make build`. Set `IMAGE_NAME` to change
@@ -119,6 +129,8 @@ in the host checkout.
 | `--variant=NAME` | Same, using `=`. |
 | `OPENCODE_VARIANT=NAME` | Same, via environment. |
 | `OPENCODE_IMAGE=…` | Used only when no variant is selected. |
+
+`base` is reserved for the shared base image and is rejected by the launcher.
 
 ### What it mounts
 
@@ -182,29 +194,37 @@ lost). The loop is:
    ```sh
    ./opencode
    ```
-2. Prompt OpenCode to integrate the change in the repository: adjust the relevant
-   `variants/<name>.containerfile` (bump a pinned version, extend the `apt-get`
-   list, add a step and its check in the `USER node` verification block) and
-   update `docs/AGENTS.md` (the canonical copy; `/workspace/AGENTS.md` is a
-   symlink) and this README to match. If you want to add or change tools that do
-   not fit the existing variants, create a new named variant with its own
-   `variants/<variant-name>.containerfile`.
+2. Prompt OpenCode to integrate the change in the repository. Common system
+   packages, directories, the OpenCode CLI, and the common health check belong in
+   `variants/base.containerfile` and `scripts/verify-common.sh`; variant-specific
+   toolchains go in the relevant `variants/<name>.containerfile` (bump a pinned
+   version, extend the `apt-get` list, add a step and its check in the `USER node`
+   verification block). Update `docs/AGENTS.md` (the canonical copy;
+   `/workspace/AGENTS.md` is a symlink) and this README to match. If you want to
+   add or change tools that do not fit the existing variants, create a new named
+   variant with its own `variants/<variant-name>.containerfile` that starts with
+   `FROM ${BASE_IMAGE}`.
 3. Exit the container and rebuild:
    ```sh
-   make rebuild                  # default (standard) image
+   make lint                     # variants must build FROM the shared base
+   make rebuild                  # base + default (standard) image
    make rebuild VARIANT=minimal  # or any other variant
+   make check                    # common health check inside every variant
    ```
 4. Start the wrapper again and prompt OpenCode for a self health check, using the
-   repository as the source of truth: every command in the verification block must
+   repository as the source of truth: every command in the verification blocks must
    run as `node`, the pinned versions in `variants/*.containerfile`,
    `docs/AGENTS.md`, and this README must agree, and the "no root‑owned files
-   under `/home/node`" guard must pass.
+   under `/home/node`" guard must pass (the runtime snapshot tmpfs is the one
+   expected exception).
 
 Example prompts:
 
 - "Bump ruff to 0.18.0: update the pin in `variants/standard.containerfile`, the
   verification block, and the version list in `docs/AGENTS.md`."
-- "Health check this image: run everything in the `USER node` verification block
+- "Add a common CLI tool: extend `variants/base.containerfile`, add it to
+  `scripts/verify-common.sh`, and update `docs/AGENTS.md` and this README."
+- "Health check this image: run everything in the `USER node` verification blocks
   as the runtime user and report any mismatch with docs/AGENTS.md."
 
 `make build` reuses cached layers, so use `make rebuild` after tool changes to
