@@ -11,6 +11,13 @@ the launcher just mounts whatever directory you start it from — and rebuilds
 still happen on the host with `make rebuild`, so nothing is installed into the
 running container.
 
+> **Scope:** a local, single-user OpenCode setup for work, balancing security
+> against convenience: the working directory and `~/.config` are mounted writable,
+> credentials are stored in plaintext, and the agent runs commands as your user.
+> It is deliberately not a hardened sandbox — running sensitive data or untrusted
+> code is still possible, with weaker isolation than a hardened setup; whether
+> that fits depends on your threat model.
+
 ## Quick start
 
 | Action | Command |
