@@ -22,9 +22,10 @@ copy:
 | `opencode/makefile` | `make build`/`rebuild` (base + variant), `make base`, `make clean`, `make lint`, `make check`, `make install-token`; selects a variant with `VARIANT=<name>` |
 | `opencode/install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
 | `opencode/opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
-| `opencode/opencode.json` | Maps the OpenAI provider to the `openai_api_key` podman secret; mounted read-only when the secret exists |
+| `opencode/opencode.json` | Maps the OpenCode Go provider to the `opencode_api_key` podman secret; mounted read-only when the secret exists |
 | `opencode/.config/` | Gitignored, mounted at `~/.config`; holds git credentials and `service.json` |
 | `opencode/README.md` | User-facing build/run/token documentation |
+| `opencode/docs/security-improvements.md` | Proposal-only note on future credential handling: SSH agent for Git and a host credential proxy |
 | `opencode/LICENSE` | MIT license |
 | `opencode/.gitignore` | Keeps `.config/`, credentials, and service config out of git |
 
@@ -143,6 +144,7 @@ revoke it on GitHub, then rotate it with `make -C opencode install-token`.
 | Secret | Where it lives | Notes |
 | --- | --- | --- |
 | GitHub token (classic PAT, scopes `repo`, `read:org`, `workflow`, account `<username>`) | `<repo>/.config/git/credentials` (mounted at `~/.config/git/credentials`), mode `600` | Plaintext. Written by `make -C opencode install-token` (which defaults to the repo `.config/git`), read by git via `credential.helper 'store --file=...'`. |
+| OpenCode Go API key | Podman secret `opencode_api_key` (mounted at `/run/secrets/opencode_api_key`) | Plaintext tmpfs inside the container. Never print, copy, or commit; create it with `podman secret create opencode_api_key -`. |
 | OpenCode server password | `<repo>/.config/opencode/service.json` (mounted at `~/.config/opencode/service.json`) | Never print, copy, or commit; gitignored. |
 | Host git credentials | host `~/.config/git/credentials` | Only the same file if `OPENCODE_USERCONFIG`/`OPENCODE_GITCONFIG` points the mount/writer at the host config; otherwise repo-local and independent. |
 

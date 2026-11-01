@@ -1,9 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4.1-flash",
   "provider": {
-    "openai": {
+    "opencode-go": {
       "options": {
-        "apiKey": "{file:/run/secrets/openai_api_key}"
+        "apiKey": "{file:/run/secrets/opencode_api_key}"
       }
     }
   }

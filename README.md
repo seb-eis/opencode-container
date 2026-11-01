@@ -17,6 +17,11 @@ running container.
 > It is deliberately not a hardened sandbox — running sensitive data or untrusted
 > code is still possible, with weaker isolation than a hardened setup; whether
 > that fits depends on your threat model.
+>
+> **Possible future security improvements:** see
+> [`docs/security-improvements.md`](docs/security-improvements.md) for two
+> unimplemented options — a limited SSH-agent setup for Git and a full host-side
+> credential proxy for Git and the OpenCode API key.
 
 ## Quick start
 
@@ -116,20 +121,20 @@ unchanged; `--` stops option parsing explicitly.
 
 ### Secrets and container user configuration
 
-The launcher uses an existing podman secret named `openai_api_key`; it does not
-read `OPENAI_API_KEY` or create the secret itself. When the secret exists, the
-launcher passes `--secret openai_api_key` and mounts the repository's
+The launcher uses an existing podman secret named `opencode_api_key`; it does not
+read `OPENCODE_API_KEY` or create the secret itself. When the secret exists, the
+launcher passes `--secret opencode_api_key` and mounts the repository's
 `opencode.json` read-only at `/home/node/.config/opencode/opencode.json`. That
-file points the OpenAI provider at `{file:/run/secrets/openai_api_key}`. Create
-the secret without putting the key in argv, for example:
+file points the OpenCode Go provider at `{file:/run/secrets/opencode_api_key}`.
+Create the secret without putting the key in argv, for example:
 
 ```sh
-read -rsp 'OpenAI API key: ' OPENAI_API_KEY; echo
-printf '%s' "$OPENAI_API_KEY" | podman secret create openai_api_key -
-unset OPENAI_API_KEY
+read -rsp 'OpenCode API key: ' OPENCODE_API_KEY; echo
+printf '%s' "$OPENCODE_API_KEY" | podman secret create opencode_api_key -
+unset OPENCODE_API_KEY
 ```
 
-If no `openai_api_key` secret exists, the launcher runs without the secret and
+If no `opencode_api_key` secret exists, the launcher runs without the secret and
 without the `opencode.json` mount.
 
 The container user configuration `/home/node/.config` is the repository's
@@ -158,7 +163,7 @@ in the host checkout.
 | `$(pwd)` | `/workspace` | Your project; primary persistent work area. |
 | volume `opencode-data` | `~/.local/share/opencode` | Sessions, logs, shell history. |
 | `<repo-directory>/.config/` | `~/.config/` | Writable config/credentials (gitignored); override with `OPENCODE_USERCONFIG`. |
-| `<repo-directory>/opencode.json` | `~/.config/opencode/opencode.json` | Read-only; only when the `openai_api_key` secret exists. |
+| `<repo-directory>/opencode.json` | `~/.config/opencode/opencode.json` | Read-only; only when the `opencode_api_key` secret exists. |
 | tmpfs | `~/.local/share/opencode/snapshot` | Wiped on every run. |
 
 The launcher also sets `GIT_CONFIG_GLOBAL=/home/node/.config/git/config` and runs

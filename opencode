@@ -10,7 +10,7 @@ VOLUME="${OPENCODE_VOLUME:-opencode-data}"
 USERCONFIG="${OPENCODE_USERCONFIG:-$repo_dir/.config/}"
 VARIANT="${OPENCODE_VARIANT:-}"
 BASE_VARIANT="base"
-SECRET_NAME="openai_api_key"
+SECRET_NAME="opencode_api_key"
 
 die() {
 	echo "error: $*" >&2
