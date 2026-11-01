@@ -2,8 +2,12 @@
 
 A podman image and launcher for running the [OpenCode](https://opencode.ai) CLI in a
 single-user, disposable container with a polyglot toolchain — no sudo, runtime
-tools installed per-user. This repository defines the image and provides the
-make/launcher tooling.
+tools installed per-user. Because the image ships the OpenCode CLI and mounts the
+repository at `/workspace`, the container is effectively self-maintaining: the
+agent that changes the image definition, pinned versions, and docs runs inside the
+image it describes, and can lint and health-check the result from the same
+session. Rebuilds still happen on the host with `make rebuild` — nothing is
+installed into the running container.
 
 ## Quick start
 
