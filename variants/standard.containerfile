@@ -13,6 +13,7 @@ USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential gdb pkg-config strace ltrace \
+        cmake ninja-build yq \
         python3 python3-pip python3-venv \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -74,6 +75,9 @@ RUN set -eux; \
     pkg-config --version; \
     strace --version; \
     ltrace --version; \
+    cmake --version; \
+    ninja --version; \
+    yq --version; \
     python3 --version; \
     python3 -m pip --version; \
     ruff --version; \

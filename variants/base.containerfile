@@ -16,11 +16,14 @@ ENV HOME=/home/node \
 
 # --------------------------------------------------
 # Common system packages. Variant-specific packages belong in the variant.
+# These are Debian trixie packages (unpinned); keeping the list here guarantees
+# every variant gets the same basic toolbox.
 # --------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash ca-certificates curl git ripgrep fd-find jq sqlite3 less procps \
-        tree \
+        tree file unzip zip zstd lsof iproute2 psmisc man-db openssh-client \
+        rsync xxd shellcheck shfmt git-lfs bzip2 xz-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

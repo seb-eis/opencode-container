@@ -47,6 +47,19 @@ dotnet SDK 10.0.403 (~/.dotnet)   rustc/cargo 1.99.1 (rustup)
 gcc/g++/gdb/make, strace, ltrace, pkg-config, tree, less, procps
 ```
 
+Additional base tools are distro-provided and unpinned (Debian trixie package
+versions):
+
+```
+file 5.46        unzip 6.00      zip 3.0           zstd 1.5.7
+lsof 4.99.4      iproute2 6.15.0 psmisc 23.7       man-db 2.13.1
+openssh 10.0p1   rsync 3.4.1     xxd (vim 9.1.1230) shellcheck 0.10.0
+shfmt 3.8.0      git-lfs 3.6.1   bzip2, xz-utils
+```
+
+Standard variant only: `cmake 3.31.6`, `ninja 1.12.1`, `yq 3.4.3` (Debian's
+Python-based 3.x, not mikefarah's v4).
+
 `fd` is a symlink to `fdfind`. `opencode2` on PATH is the same CLI.
 
 ## Persistence: what survives a run

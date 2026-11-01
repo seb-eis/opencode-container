@@ -26,9 +26,15 @@ required; language toolchains are installed per-user inside the image.
 ### Default image (standard)
 
 The default variant is the shared base plus the full toolchain: rustup, .NET SDK
-10.0.403, Python 3, pip/venv, ruff, gcc/g++, gdb, strace, ltrace, pkg-config, and
-the OpenCode CLI. The base itself provides Debian 13 (trixie), Node 22, and the
-common system tools.
+10.0.403, Python 3, pip/venv, ruff, cmake, ninja, yq, gcc/g++, gdb, strace,
+ltrace, pkg-config, and the OpenCode CLI. The base itself provides Debian 13
+(trixie), Node 22, the OpenCode CLI, and a common toolbox: `file`,
+`unzip`/`zip`, `zstd`, `lsof`, `iproute2` (`ss`/`ip`), `psmisc`, `man-db`,
+`openssh-client`, `rsync`, `xxd`, `shellcheck`, `shfmt`, and `git-lfs`.
+
+Debian's `yq` package is the Python-based 3.x implementation, not mikefarah's
+v4; its syntax differs from v4 examples. It lives in the standard variant only,
+which already has Python.
 
 ### Variants and the shared base
 
@@ -39,9 +45,9 @@ the same launcher contract (`USER node`, `/workspace`, `ENTRYPOINT opencode`).
 
 | Containerfile | Contains | Build |
 | --- | --- | --- |
-| `base` | Shared base: Debian 13, Node 22, common CLI tools, OpenCode CLI. Not selectable | `make base` |
-| `standard` (default) | Base + rustup, .NET SDK, Python 3, ruff, compilers/debuggers | `make build` |
-| `minimal` | Base only | `make build VARIANT=minimal` |
+| `base` | Shared base: Debian 13, Node 22, the common toolbox, OpenCode CLI. Not selectable | `make base` |
+| `standard` (default) | Base + rustup, .NET SDK, Python 3, ruff, cmake, ninja, yq, compilers/debuggers | `make build` |
+| `minimal` | Base only (includes the common toolbox) | `make build VARIANT=minimal` |
 | `python` | Base + Python 3 (`python3`, `pip`, `venv`) | `make build VARIANT=python` |
 
 Each variant maps to the `opencode:<name>` tag (or `<IMAGE_NAME>:<name>` if
