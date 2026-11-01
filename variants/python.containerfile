@@ -3,8 +3,8 @@
 # No Rust, .NET or ruff. Add python3-dev and build-essential if you need to
 # compile C extensions.
 #
-# Build: make build CONTAINERFILE=variants/python.containerfile IMAGE_TAG=python
-# Run:   OPENCODE_IMAGE=opencode:python ./opencode
+# Build: make build VARIANT=python
+# Run:   ./opencode --variant python
 
 FROM node:22-trixie-slim
 

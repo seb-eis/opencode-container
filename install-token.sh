@@ -3,6 +3,9 @@
 #
 # Usage:  make install-token [GITHUB_USER=<login>] [GITHUB_TOKEN=<token>]
 #
+# GITCONFIG overrides the destination directory; it defaults to
+# <repo>/.config/git (the launcher's mounted config directory).
+#
 # The token is taken from $GITHUB_TOKEN if set, otherwise prompted for with
 # echo disabled. Only the single-line URL form is written, because that is the
 # only format `git credential-store` can read back.
@@ -59,10 +62,10 @@ if [ "${SKIP_VERIFY:-0}" != 1 ]; then
 		body=$(mktemp)
 		head=$(mktemp)
 		trap 'rm -f "$body" "$head"' EXIT INT TERM
-		code=$(curl -sS -o "$body" -D "$head" -w '%{http_code}' \
-			-H "Authorization: Bearer $token" \
-			-H 'Accept: application/vnd.github+json' \
-			https://api.github.com/user) || code=000
+		# Keep the token out of argv/ps by passing the headers via stdin.
+		code=$(printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.github+json"\n' "$token" |
+			curl --config - -sS -o "$body" -D "$head" -w '%{http_code}' \
+				https://api.github.com/user) || code=000
 		if [ "$code" != 200 ]; then
 			echo "error: GitHub rejected the token (HTTP $code)" >&2
 			sed -n 's/.*"message": *"\([^"]*\)".*/  GitHub says: \1/p' "$body" >&2 || true
@@ -101,8 +104,10 @@ trap - EXIT INT TERM
 
 # Prove the store can read back what we just wrote.
 if command -v git >/dev/null 2>&1; then
+	# Reset the helper chain so the round-trip reads only this file, not the
+	# global helper (which may point at a different credentials file).
 	got=$(printf 'protocol=https\nhost=github.com\n\n' |
-		git -c credential.helper="store --file=$CREDENTIALS" credential fill 2>/dev/null |
+		git -c credential.helper= -c credential.helper="store --file=$CREDENTIALS" credential fill 2>/dev/null |
 		sed -n 's/^password=//p') || got=
 	[ "$got" = "$token" ] || die "credential store round-trip failed for $CREDENTIALS"
 fi

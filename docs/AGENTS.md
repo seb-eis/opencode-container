@@ -5,15 +5,24 @@ Instructions for agent runs inside this container. Read before changing anything
 ## What this workspace is
 
 `/workspace` is a host bind mount (`$(pwd):/workspace:Z`) into a single-user podman
-container that ships the OpenCode CLI and a polyglot toolchain. The only project
-content currently here is `opencode/`, the container image definition:
+container that ships the OpenCode CLI and a polyglot toolchain. The project
+content is `opencode/`, the container image and launcher definition.
+`/workspace/AGENTS.md` is a symlink to `opencode/docs/AGENTS.md`, the canonical
+copy:
 
 | Path | Purpose |
 | --- | --- |
-| `opencode/containerfile` | Image build: Debian 13, Node 22, toolchains (all per-user) |
-| `opencode/makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token` |
+| `opencode/variants/standard.containerfile` | Default image: Debian 13, Node 22, full toolchain |
+| `opencode/variants/minimal.containerfile` | System CLI tools + Node/OpenCode only |
+| `opencode/variants/python.containerfile` | Minimal + Python 3 |
+| `opencode/makefile` | `make build`, `make rebuild` (no cache), `make clean`, `make install-token`; selects a variant with `VARIANT=<name>` |
 | `opencode/install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
 | `opencode/opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
+| `opencode/opencode.json` | Maps the OpenAI provider to the `openai_api_key` podman secret; mounted read-only when the secret exists |
+| `opencode/.config/` | Gitignored, mounted at `~/.config`; holds git credentials and `service.json` |
+| `opencode/README.md` | User-facing build/run/token documentation |
+| `opencode/LICENSE` | MIT license |
+| `opencode/.gitignore` | Keeps `.config/`, credentials, and service config out of git |
 
 ## Runtime environment (verified)
 
@@ -31,7 +40,7 @@ node 22.23.4     npm 10.9.9       opencode 2.2.4   git 2.47.3
 rg 14.1.1        fd 10.2.0        jq 1.7           sqlite3 3.46.1
 python 3.13.5    pip 25.1.1       ruff 0.17.3
 dotnet SDK 10.0.403 (~/.dotnet)   rustc/cargo 1.99.1 (rustup)
-gcc/g++/gdb/make, strace, ltrace, pkg-config, tree
+gcc/g++/gdb/make, strace, ltrace, pkg-config, tree, less, procps
 ```
 
 `fd` is a symlink to `fdfind`. `opencode2` on PATH is the same CLI.
@@ -42,7 +51,7 @@ gcc/g++/gdb/make, strace, ltrace, pkg-config, tree
 | --- | --- |
 | `/workspace` | Host directory — persists. Put all work here. |
 | `~/.local/share/opencode` | Named podman volume `opencode-data` — persists (sessions, logs, shell history). |
-| `~/.config/git` | Host `~/.config/git` bind mount (`OPENCODE_GITCONFIG` overrides) — persists (global git config + credentials). |
+| `~/.config` | Repository `<repo>/.config/` mounted at `~/.config` (`OPENCODE_USERCONFIG` overrides) — persists (gitignored git config, credentials, and `service.json`). |
 | `~/.local/share/opencode/snapshot` | **tmpfs**, mode `1777` — wiped every run. `git init` works, but never store anything needed later. |
 | `/`, `/tmp`, rest of `$HOME` | Container-local — lost on exit. |
 
@@ -57,13 +66,17 @@ gcc/g++/gdb/make, strace, ltrace, pkg-config, tree
   Read-only queries with `sqlite3 -readonly` are OK; writes can corrupt sessions.
 - **Never create root-owned files under `/home/node`.** The image build ends with
   `test -z "$(find /home/node -user root -print -quit)"` and will fail.
-- **Global git config is host-backed.** `~/.config/git` is bind-mounted from the
-  host (override with `OPENCODE_GITCONFIG`), and `GIT_CONFIG_GLOBAL` points at it,
-  so `git config --global` persists across runs. Identity is set to
-  `Sebastian Eisele <sebastian.eisele@rwth-aachen.de>`; commits are authored as
-  that, so do not change it unless asked. Credentials live in
-  `~/.config/git/credentials` — see [Secrets](#secrets). Never store tokens in
-  `/workspace`.
+- **Git config lives in the mounted repo `.config/`.** The launcher mounts
+  `<repo>/.config/` at `~/.config/` (override with `OPENCODE_USERCONFIG`) and
+  sets `GIT_CONFIG_GLOBAL=/home/node/.config/git/config`, so
+  `git config --global` persists across runs in the repository checkout. That
+  directory is gitignored by design because it carries credentials and
+  `service.json`. Identity is set in `.config/git/config` to
+  `<username> <email>`; commits are authored as that, so do not change it unless
+  asked. Credentials live in
+  `.config/git/credentials` — see [Secrets](#secrets). Never commit tokens or put
+  them in tracked files; the gitignored `.config/git/credentials` is the intended
+  location.
 - **Pushing needs consent.** Never push to `main` or to a branch you did not create
   yourself without asking first — see [Pushing and branches](#pushing-and-branches).
 - **Secrets are one `cat` away from permanent.** Everything printed is captured in
@@ -101,23 +114,25 @@ the transcript, in `~/.local/share/opencode/shell/<project>/` and in
 
 | Secret | Where it lives | Notes |
 | --- | --- | --- |
-| GitHub token (classic PAT, scopes `repo`, `read:org`, `workflow`, account `seb-eis`) | `~/.config/git/credentials`, mode `600`, host bind mount | Plaintext. Written by `make -C opencode install-token`, read by git via `credential.helper 'store --file=...'`. |
-| OpenCode server password | `~/.config/opencode/service.json` | Never print, copy, or commit. |
-| Host git credentials | same file as the GitHub token | Shared with the host user; rotating it affects host git too. |
+| GitHub token (classic PAT, scopes `repo`, `read:org`, `workflow`, account `<username>`) | `<repo>/.config/git/credentials` (mounted at `~/.config/git/credentials`), mode `600` | Plaintext. Written by `make -C opencode install-token` (which defaults to the repo `.config/git`), read by git via `credential.helper 'store --file=...'`. |
+| OpenCode server password | `<repo>/.config/opencode/service.json` (mounted at `~/.config/opencode/service.json`) | Never print, copy, or commit; gitignored. |
+| Host git credentials | host `~/.config/git/credentials` | Only the same file if `OPENCODE_USERCONFIG`/`OPENCODE_GITCONFIG` points the mount/writer at the host config; otherwise repo-local and independent. |
 
 Install or rotate a token:
 
 ```sh
 make -C opencode install-token                        # prompts, input hidden
-make -C opencode install-token GITHUB_USER=seb-eis     # prompts for token only
+make -C opencode install-token GITHUB_USER=<username>  # prompts for token only
 GITHUB_TOKEN=... make -C opencode install-token        # non-interactive
 SKIP_VERIFY=1 ...                                      # offline
 ```
 
 It verifies against `api.github.com` (prints login + scopes, never the token),
 replaces any existing `@github.com` line, preserves other hosts, and writes
-`https://user:token@github.com`. **Only that single-line form works** —
-`git credential-store` silently ignores the `protocol=`/`host=` multi-line form.
+`https://user:token@github.com`. `make -C opencode install-token` defaults to
+`<repo>/.config/git/credentials`; `OPENCODE_GITCONFIG` overrides the destination.
+**Only that single-line form works** — `git credential-store` silently ignores
+the `protocol=`/`host=` multi-line form.
 Read it back without printing it:
 
 ```sh
@@ -135,7 +150,7 @@ Leak channels — all observed in practice, not hypothetical:
 | `sh -x`, `make -n`, `SHELL='sh -x'` | Echoes the recipe and variables | Never trace token-handling code |
 | `printf '...\nTOKEN\n' \| make install-token` | The token becomes a command in shell history | Use the hidden prompt |
 | `git remote add https://user:token@host/...` | Token is persisted in `.git/config` and copied by clones | Token-free remotes; let the helper supply auth |
-| Any token in `/workspace` | Persists in the host repo and can be pushed | Never; use the credential file |
+| Any token in tracked repo files | Persists in the host repo and can be pushed | Never; use the gitignored `.config/git/credentials` |
 | `git config credential.helper` change, repo-local helper, `GIT_ASKPASS` | Can silently bypass the store and prompt or write elsewhere | Keep the global helper; set `GIT_TERMINAL_PROMPT=0` for non-interactive runs |
 | `git -c credential.helper='store --file=...'` while testing | **Appends** to the helper chain instead of replacing it; `reject`/`approve` are sent to *every* helper, so a test `reject` erases the real entry too | Isolate with `GIT_CONFIG_GLOBAL=/dev/null` and a temp file, or back up `~/.config/git/credentials` first |
 
@@ -144,24 +159,30 @@ It does not protect the token from `ps`, `/proc`, shell tracing, or any process
 running as uid 1000 — the file is plaintext by design (that is what git's `store`
 helper is).
 
-If a token leaks: revoke it on GitHub first, then re-run `make install-token`.
+If a token leaks: revoke it on GitHub first, then re-run `make -C opencode install-token`.
 `gh` is not installed; if you add it, do not use `gh auth login` (its config under
 `~/.config/gh` is container-local and lost on exit) — derive `GH_TOKEN` per
 command from the credential file instead.
 
 ## Changing the image
 
-1. Edit `opencode/containerfile`. Keep pinned versions (opencode 2.2.4, ruff
-   0.17.3, rust 1.99.1, dotnet 10.0.403) unless the task is to upgrade.
+1. Edit `opencode/variants/standard.containerfile` (or `minimal`/`python`). Keep
+   pinned versions (opencode 2.2.4, ruff 0.17.3, rust 1.99.1, dotnet 10.0.403)
+   unless the task is to upgrade.
 2. Extend the `USER node` verification block when adding a tool — every new
    binary should be exercised as the runtime user, not root.
 3. Build and test:
    ```sh
-   make -C opencode build      # or: make -C opencode rebuild (--no-cache)
-   ./opencode/opencode         # mounts the current dir at /workspace
+   make -C opencode build                  # or: make -C opencode rebuild (--no-cache)
+   make -C opencode build VARIANT=minimal  # any other variant
+   cd opencode && ./opencode               # mounts the repo at /workspace
    ```
    Or verify a build without the TUI: `podman run --rm opencode:standard <cmd>`.
+   `VARIANT=<name>` is the only way to select a containerfile; `CONTAINERFILE=`
+   is no longer supported.
 
 Launcher knobs (see `opencode/opencode`): `OPENCODE_IMAGE` (default
-`opencode:standard`), `OPENCODE_VOLUME` (default `opencode-data`),
-`OPENCODE_GITCONFIG` (default host `~/.config/git`).
+`opencode:standard`, used only when no variant is selected), `OPENCODE_VARIANT`
+(selects `opencode:<name>`; `--variant` overrides it), `OPENCODE_VOLUME` (default
+`opencode-data`), `OPENCODE_USERCONFIG` (default `<repo>/.config/`).
+`OPENCODE_GITCONFIG` is a make/install-token knob only.

@@ -7,6 +7,12 @@ VARIANT ?= standard
 
 AVAILABLE_VARIANTS := $(patsubst variants/%.containerfile,%,$(wildcard variants/*.containerfile))
 
+# CONTAINERFILE was replaced by VARIANT; fail loudly instead of silently
+# ignoring a command-line override.
+ifneq ($(CONTAINERFILE),)
+  $(error CONTAINERFILE is no longer supported; use VARIANT=<name> (available: $(if $(AVAILABLE_VARIANTS),$(AVAILABLE_VARIANTS),none)))
+endif
+
 ifneq ($(findstring ',$(VARIANT)),)
   $(error invalid variant name '$(VARIANT)')
 endif
@@ -17,15 +23,15 @@ ifeq ($(filter $(VARIANT),$(AVAILABLE_VARIANTS)),)
   $(error unknown variant '$(VARIANT)' (available: $(if $(AVAILABLE_VARIANTS),$(AVAILABLE_VARIANTS),none)))
 endif
 
-CONTAINERFILE := variants/$(VARIANT).containerfile
+VARIANT_FILE := variants/$(VARIANT).containerfile
 IMAGE := $(IMAGE_NAME):$(VARIANT)
 
-# Host directory bind-mounted at ~/.config/git inside the container; the token
-# lands there so it survives container restarts. Matches the launcher's
-# OPENCODE_GITCONFIG default.
-GITCONFIG ?= $(if $(OPENCODE_GITCONFIG),$(OPENCODE_GITCONFIG),$(HOME)/.config/git)
+# Directory mounted at ~/.config inside the container; the token lands there so
+# it survives container restarts. Defaults to the repo's .config/git, matching
+# the launcher. OPENCODE_GITCONFIG overrides it.
+GITCONFIG ?= $(if $(OPENCODE_GITCONFIG),$(OPENCODE_GITCONFIG),$(CURDIR)/.config/git)
 
-.PHONY: all build rebuild clean run shell install-token
+.PHONY: all build rebuild clean install-token
 
 all: build
 
@@ -46,14 +52,14 @@ install-token:
 build:
 	podman build \
 		-t $(IMAGE) \
-		-f $(CONTAINERFILE) \
+		-f $(VARIANT_FILE) \
 		.
 
 rebuild:
 	podman build \
 		--no-cache \
 		-t $(IMAGE) \
-		-f $(CONTAINERFILE) \
+		-f $(VARIANT_FILE) \
 		.
 
 clean:

@@ -3,8 +3,8 @@
 # Node is inherited from the base image because the OpenCode CLI is distributed
 # as an npm package; nothing else (Rust, .NET, Python, ruff) is installed.
 #
-# Build: make build CONTAINERFILE=variants/minimal.containerfile IMAGE_TAG=minimal
-# Run:   OPENCODE_IMAGE=opencode:minimal ./opencode
+# Build: make build VARIANT=minimal
+# Run:   ./opencode --variant minimal
 
 FROM node:22-trixie-slim
 

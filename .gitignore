@@ -20,7 +20,8 @@ id_ed25519*
 .env.*
 service.json
 
-# Never commit shared configuration
+# Intentionally ignored: mounted at ~/.config in the container and carries
+# credentials (git) and service.json. Never commit it.
 .config
 
 # Local overrides

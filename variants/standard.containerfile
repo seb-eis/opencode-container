@@ -15,7 +15,7 @@ ENV HOME=/home/node \
 # --------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bash ca-certificates curl git ripgrep fd-find jq sqlite3 \
+        bash ca-certificates curl git ripgrep fd-find jq sqlite3 less procps \
         build-essential gdb pkg-config strace ltrace \
         python3 python3-pip python3-venv \
         tree \
@@ -86,6 +86,8 @@ RUN set -eux; \
     fd --version; \
     jq --version; \
     sqlite3 --version; \
+    less --version; \
+    ps --version; \
     gcc --version; \
     gdb --version; \
     pkg-config --version; \
