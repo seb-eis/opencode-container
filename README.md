@@ -18,6 +18,10 @@ running container.
 > code is still possible, with weaker isolation than a hardened setup; whether
 > that fits depends on your threat model.
 >
+> **Author's note:** this project was created for personal use and was built
+> recursively using the OpenCode container itself to improve it. Keep that in
+> mind when evaluating whether it fits your needs.
+>
 > **Possible future security improvements:** see
 > [`docs/security-improvements.md`](docs/security-improvements.md) for two
 > unimplemented options — a limited SSH-agent setup for Git and a full host-side
