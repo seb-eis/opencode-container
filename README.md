@@ -227,8 +227,8 @@ lost). The loop is:
    `variants/base.containerfile` and `scripts/verify-common.sh`; variant-specific
    toolchains go in the relevant `variants/<name>.containerfile` (bump a pinned
    version, extend the `apt-get` list, add a step and its check in the `USER node`
-   verification block). Update `docs/AGENTS.md` (the canonical copy;
-   `/workspace/AGENTS.md` is a symlink) and this README to match. If you want to
+   verification block). Update `AGENTS.md` at the repository root and this
+   README to match. If you want to
    add or change tools that do not fit the existing variants, create a new named
    variant with its own `variants/<variant-name>.containerfile` that starts with
    `FROM ${BASE_IMAGE}`.
@@ -242,18 +242,18 @@ lost). The loop is:
 4. Start the wrapper again and prompt OpenCode for a self health check, using the
    repository as the source of truth: every command in the verification blocks must
    run as `node`, the pinned versions in `variants/*.containerfile`,
-   `docs/AGENTS.md`, and this README must agree, and the "no root‑owned files
+   `AGENTS.md`, and this README must agree, and the "no root‑owned files
    under `/home/node`" guard must pass (the runtime snapshot tmpfs is the one
    expected exception).
 
 Example prompts:
 
 - "Bump ruff to 0.18.0: update the pin in `variants/standard.containerfile`, the
-  verification block, and the version list in `docs/AGENTS.md`."
+  verification block, and the version list in `AGENTS.md`."
 - "Add a common CLI tool: extend `variants/base.containerfile`, add it to
-  `scripts/verify-common.sh`, and update `docs/AGENTS.md` and this README."
+  `scripts/verify-common.sh`, and update `AGENTS.md` and this README."
 - "Health check this image: run everything in the `USER node` verification blocks
-  as the runtime user and report any mismatch with docs/AGENTS.md."
+  as the runtime user and report any mismatch with AGENTS.md."
 
 `make build` reuses cached layers, so use `make rebuild` after tool changes to
 exercise the whole chain.

@@ -193,7 +193,7 @@ all keys in the host agent become available to the container.
 - `.config/git/config`: remove the credential helper and the old SSH-to-HTTPS
   rewrite.
 - `.config/git/credentials`: delete after verifying SSH.
-- `README.md` and `docs/AGENTS.md`: replace the token-first documentation with
+- `README.md` and `AGENTS.md`: replace the token-first documentation with
   SSH setup; keep the token as an optional LFS/API fallback.
 - No image change is required: `openssh-client` is already installed and
   `verify-common.sh` already checks `ssh -V`.
@@ -361,7 +361,7 @@ must not log them.
   header.
 - `.config/git/config`: proxy URL rewrite and capability header.
 - `install-token.sh`: write host-only secrets instead of the repo `.config`.
-- `README.md` and `docs/AGENTS.md`: secret storage and rotation.
+- `README.md` and `AGENTS.md`: secret storage and rotation.
 - `variants/base.containerfile`: only for the Unix-socket transport, add
   `socat` and an entrypoint bridge.
 

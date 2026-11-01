@@ -1,33 +1,40 @@
 # AGENTS.md
 
-Instructions for agent runs inside this container. Read before changing anything.
+Instructions for agent runs inside this container when the opencode repository is
+mounted at `/workspace`. Read before changing anything.
 
 ## What this workspace is
 
-`/workspace` is a host bind mount (`$(pwd):/workspace:Z`) into a single-user podman
-container that ships the OpenCode CLI and a polyglot toolchain. The project
-content is `opencode/`, the container image and launcher definition.
-`/workspace/AGENTS.md` is a symlink to `opencode/docs/AGENTS.md`, the canonical
-copy:
+`/workspace` is a host bind mount (`$(pwd):/workspace:Z`) of the repository root
+into a single-user podman container that ships the OpenCode CLI and a polyglot
+toolchain. This file is relevant to self-maintenance: changing the image,
+launcher, scripts, and documentation from inside the container it describes.
+
+Self-maintenance is always done by launching the container from the repository
+root, so `/workspace` is the repository root itself, not its parent. This file
+lives at `/workspace/AGENTS.md` and is the canonical copy. If the container is
+launched from a different workspace, this file is not part of that workspace and
+these instructions do not apply.
 
 | Path | Purpose |
 | --- | --- |
-| `opencode/variants/base.containerfile` | Shared base: common system setup for every variant (not user-selectable) |
-| `opencode/variants/standard.containerfile` | Default variant: shared base + full toolchain |
-| `opencode/variants/minimal.containerfile` | Shared base only |
-| `opencode/variants/python.containerfile` | Shared base + Python 3 |
-| `opencode/scripts/verify-common.sh` | Common health check run by the base build and `make check` |
-| `opencode/scripts/check-variants.sh` | Builds each runnable variant and runs the common health check (used by `make check`) |
-| `opencode/.containerignore` | Keeps `.config/`, `.git/` out of the podman build context |
-| `opencode/makefile` | `make build`/`rebuild` (base + variant), `make base`, `make clean`, `make lint`, `make check`, `make install-token`; selects a variant with `VARIANT=<name>` |
-| `opencode/install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
-| `opencode/opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
-| `opencode/opencode.json` | Maps the OpenCode Go provider to the `opencode_api_key` podman secret; mounted read-only when the secret exists |
-| `opencode/.config/` | Gitignored, mounted at `~/.config`; holds git credentials and `service.json` |
-| `opencode/README.md` | User-facing build/run/token documentation |
-| `opencode/docs/security-improvements.md` | Proposal-only note on future credential handling: SSH agent for Git and a host credential proxy |
-| `opencode/LICENSE` | MIT license |
-| `opencode/.gitignore` | Keeps `.config/`, credentials, and service config out of git |
+| `variants/base.containerfile` | Shared base: common system setup for every variant (not user-selectable) |
+| `variants/standard.containerfile` | Default variant: shared base + full toolchain |
+| `variants/minimal.containerfile` | Shared base only |
+| `variants/python.containerfile` | Shared base + Python 3 |
+| `scripts/verify-common.sh` | Common health check run by the base build and `make check` |
+| `scripts/check-variants.sh` | Builds each runnable variant and runs the common health check (used by `make check`) |
+| `.containerignore` | Keeps `.config/`, `.git/` out of the podman build context |
+| `makefile` | `make build`/`rebuild` (base + variant), `make base`, `make clean`, `make lint`, `make check`, `make install-token`; selects a variant with `VARIANT=<name>` |
+| `install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
+| `opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
+| `opencode.json` | Maps the OpenCode Go provider to the `opencode_api_key` podman secret; mounted read-only when the secret exists |
+| `.config/` | Gitignored, mounted at `~/.config`; holds git credentials and `service.json` |
+| `README.md` | User-facing build/run/token documentation |
+| `AGENTS.md` | Canonical agent instructions (this file) |
+| `docs/security-improvements.md` | Proposal-only note on future credential handling: SSH agent for Git and a host credential proxy |
+| `LICENSE` | MIT license |
+| `.gitignore` | Keeps `.config/`, credentials, and service config out of git |
 
 ## Runtime environment (verified)
 
@@ -69,7 +76,7 @@ Python-based 3.x, not mikefarah's v4).
 | --- | --- |
 | `/workspace` | Host directory — persists. Put all work here. |
 | `~/.local/share/opencode` | Named podman volume `opencode-data` — persists (sessions, logs, shell history). |
-| `~/.config` | Repository `<repo>/.config/` mounted at `~/.config` (`OPENCODE_USERCONFIG` overrides) — persists (gitignored git config, credentials, and `service.json`). |
+| `~/.config` | Repository `.config/` mounted at `~/.config` (`OPENCODE_USERCONFIG` overrides) — persists (gitignored git config, credentials, and `service.json`). |
 | `~/.local/share/opencode/snapshot` | **tmpfs**, mode `1777` — wiped every run. `git init` works, but never store anything needed later. |
 | `/`, `/tmp`, rest of `$HOME` | Container-local — lost on exit. |
 
@@ -85,7 +92,7 @@ Python-based 3.x, not mikefarah's v4).
 - **Never create root-owned files under `/home/node`.** The image build ends with
   `test -z "$(find /home/node -user root -print -quit)"` and will fail.
 - **Git config lives in the mounted repo `.config/`.** The launcher mounts
-  `<repo>/.config/` at `~/.config/` (override with `OPENCODE_USERCONFIG`) and
+  `.config/` at `~/.config/` (override with `OPENCODE_USERCONFIG`) and
   sets `GIT_CONFIG_GLOBAL=/home/node/.config/git/config`, so
   `git config --global` persists across runs in the repository checkout. That
   directory is gitignored by design because it carries credentials and
@@ -134,33 +141,33 @@ the transcript, in `~/.local/share/opencode/shell/<project>/` and in
 `opencode.db`; there is no "just this once".
 
 **Never print, read, or otherwise expose the mounted git credentials.** The file
-`<repo>/.config/git/credentials` (mounted at `~/.config/git/credentials`) must
+`.config/git/credentials` (mounted at `~/.config/git/credentials`) must
 not be `cat`ed, grepped, searched, copied, hashed, or passed to any command whose
 output could enter the context. Do not use recursive searches or shell globs that
 may match it. If a check is unavoidable, use `git credential fill` and print only
 a boolean or a short prefix. If it is exposed, treat the token as compromised:
-revoke it on GitHub, then rotate it with `make -C opencode install-token`.
+revoke it on GitHub, then rotate it with `make install-token`.
 
 | Secret | Where it lives | Notes |
 | --- | --- | --- |
-| GitHub token (classic PAT, scopes `repo`, `read:org`, `workflow`, account `<username>`) | `<repo>/.config/git/credentials` (mounted at `~/.config/git/credentials`), mode `600` | Plaintext. Written by `make -C opencode install-token` (which defaults to the repo `.config/git`), read by git via `credential.helper 'store --file=...'`. |
+| GitHub token (classic PAT, scopes `repo`, `read:org`, `workflow`, account `<username>`) | `.config/git/credentials` (mounted at `~/.config/git/credentials`), mode `600` | Plaintext. Written by `make install-token` (which defaults to the repo `.config/git`), read by git via `credential.helper 'store --file=...'`. |
 | OpenCode Go API key | Podman secret `opencode_api_key` (mounted at `/run/secrets/opencode_api_key`) | Plaintext tmpfs inside the container. Never print, copy, or commit; create it with `podman secret create opencode_api_key -`. |
-| OpenCode server password | `<repo>/.config/opencode/service.json` (mounted at `~/.config/opencode/service.json`) | Never print, copy, or commit; gitignored. |
+| OpenCode server password | `.config/opencode/service.json` (mounted at `~/.config/opencode/service.json`) | Never print, copy, or commit; gitignored. |
 | Host git credentials | host `~/.config/git/credentials` | Only the same file if `OPENCODE_USERCONFIG`/`OPENCODE_GITCONFIG` points the mount/writer at the host config; otherwise repo-local and independent. |
 
 Install or rotate a token:
 
 ```sh
-make -C opencode install-token                        # prompts, input hidden
-make -C opencode install-token GITHUB_USER=<username>  # prompts for token only
-GITHUB_TOKEN=... make -C opencode install-token        # non-interactive
+make install-token                        # prompts, input hidden
+make install-token GITHUB_USER=<username>  # prompts for token only
+GITHUB_TOKEN=... make install-token        # non-interactive
 SKIP_VERIFY=1 ...                                      # offline
 ```
 
 It verifies against `api.github.com` (prints login + scopes, never the token),
 replaces any existing `@github.com` line, preserves other hosts, and writes
-`https://user:token@github.com`. `make -C opencode install-token` defaults to
-`<repo>/.config/git/credentials`; `OPENCODE_GITCONFIG` overrides the destination.
+`https://user:token@github.com`. `make install-token` defaults to
+`.config/git/credentials`; `OPENCODE_GITCONFIG` overrides the destination.
 **Only that single-line form works** — `git credential-store` silently ignores
 the `protocol=`/`host=` multi-line form.
 Read it back without printing it:
@@ -189,34 +196,34 @@ It does not protect the token from `ps`, `/proc`, shell tracing, or any process
 running as uid 1000 — the file is plaintext by design (that is what git's `store`
 helper is).
 
-If a token leaks: revoke it on GitHub first, then re-run `make -C opencode install-token`.
+If a token leaks: revoke it on GitHub first, then re-run `make install-token`.
 `gh` is not installed; if you add it, do not use `gh auth login` (its config under
 `~/.config/gh` is container-local and lost on exit) — derive `GH_TOKEN` per
 command from the credential file instead.
 
 ## Changing the image
 
-1. Common packages and system setup go in `opencode/variants/base.containerfile`;
-   variant-specific toolchains go in `opencode/variants/<name>.containerfile`.
+1. Common packages and system setup go in `variants/base.containerfile`;
+   variant-specific toolchains go in `variants/<name>.containerfile`.
    Keep pinned versions (opencode 2.2.4, ruff 0.17.3, rust 1.99.1,
    dotnet 10.0.403) unless the task is to upgrade.
-2. Add common checks to `opencode/scripts/verify-common.sh`; add variant-specific
+2. Add common checks to `scripts/verify-common.sh`; add variant-specific
    checks to the `USER node` verification block in that variant. Every new binary
    should be exercised as the runtime user, not root.
-3. Build and test:
+3. On the host, from the repository root, build and test:
    ```sh
-   make -C opencode lint                   # every variant must build FROM ${BASE_IMAGE}
-   make -C opencode build                  # base + default (standard)
-   make -C opencode build VARIANT=minimal  # base + any other variant
-   make -C opencode check                  # common health check in every variant
-   cd opencode && ./opencode               # mounts the repo at /workspace
+   make lint                     # every variant must build FROM ${BASE_IMAGE}
+   make build                    # base + default (standard)
+   make build VARIANT=minimal    # base + any other variant
+   make check                    # common health check in every variant
+   ./opencode                    # mounts the repository at /workspace
    ```
    Or verify a build without the TUI: `podman run --rm opencode:standard <cmd>`.
    `VARIANT=<name>` is the only way to select a containerfile; `CONTAINERFILE=`
    is no longer supported, and `base` is reserved for the shared base image.
 
-Launcher knobs (see `opencode/opencode`): `OPENCODE_IMAGE` (default
+Launcher knobs (see `opencode`): `OPENCODE_IMAGE` (default
 `opencode:standard`, used only when no variant is selected), `OPENCODE_VARIANT`
 (selects `opencode:<name>`; `--variant` overrides it), `OPENCODE_VOLUME` (default
-`opencode-data`), `OPENCODE_USERCONFIG` (default `<repo>/.config/`).
+`opencode-data`), `OPENCODE_USERCONFIG` (default `.config/`).
 `OPENCODE_GITCONFIG` is a make/install-token knob only.
