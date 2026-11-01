@@ -1,6 +1,6 @@
 # opencode-container
 
-A podman image and launcher for running the [OpenCode](https://opencode.ai) CLI in a
+A podman image builder and launcher for running the [OpenCode](https://opencode.ai) CLI in a
 single-user, disposable container with a polyglot toolchain — no sudo, runtime
 tools installed per-user. The container is effectively self-maintaining: because
 the image ships the OpenCode CLI, starting it from the repository root mounts the
