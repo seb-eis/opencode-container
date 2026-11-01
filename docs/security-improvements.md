@@ -360,7 +360,7 @@ must not log them.
 - `opencode.json`: V2 provider shape, proxy `baseURL`, dummy key, capability
   header.
 - `.config/git/config`: proxy URL rewrite and capability header.
-- `install-token.sh`: write host-only secrets instead of the repo `.config`.
+- `scripts/install-token.sh`: write host-only secrets instead of the repo `.config`.
 - `README.md` and `AGENTS.md`: secret storage and rotation.
 - `variants/base.containerfile`: only for the Unix-socket transport, add
   `socat` and an entrypoint bridge.

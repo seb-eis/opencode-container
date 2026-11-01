@@ -197,8 +197,8 @@ The token is verified against `api.github.com` (login + scopes are printed, neve
 the token), then written as `https://user:token@github.com` to
 `$GITCONFIG/credentials` with mode `600`. `GITCONFIG` defaults to
 `<repo>/.config/git`, the directory mounted at `~/.config/git` in the container;
-set `OPENCODE_GITCONFIG` to override it. Running `install-token.sh` directly
-without `GITCONFIG` uses the same repo default. Re-running replaces the existing
+set `OPENCODE_GITCONFIG` to override it. Running `scripts/install-token.sh`
+directly without `GITCONFIG` uses the same repo default. Re-running replaces the existing
 `@github.com` entry and preserves other hosts. Only the single‑line URL form is
 used, because that is the only format `git credential-store` can read back.
 

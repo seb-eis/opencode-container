@@ -54,7 +54,7 @@ install-token:
 	GITHUB_USER='$(GITHUB_USER)' \
 	GITHUB_TOKEN='$(GITHUB_TOKEN)' \
 	SKIP_VERIFY='$(SKIP_VERIFY)' \
-	sh ./install-token.sh
+	sh ./scripts/install-token.sh
 
 base:
 	podman build \

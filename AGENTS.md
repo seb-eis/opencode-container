@@ -26,7 +26,7 @@ these instructions do not apply.
 | `scripts/check-variants.sh` | Builds each runnable variant and runs the common health check (used by `make check`) |
 | `.containerignore` | Keeps `.config/`, `.git/` out of the podman build context |
 | `makefile` | `make build`/`rebuild` (base + variant), `make base`, `make clean`, `make lint`, `make check`, `make install-token`; selects a variant with `VARIANT=<name>` |
-| `install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
+| `scripts/install-token.sh` | Stores/rotates the GitHub token in the credential helper file |
 | `opencode` | Launcher: `podman run ... "$IMAGE" "$@"` |
 | `opencode.json` | Maps the OpenCode Go provider to the `opencode_api_key` podman secret; mounted read-only when the secret exists |
 | `.config/` | Gitignored, mounted at `~/.config`; holds git credentials and `service.json` |
@@ -191,7 +191,7 @@ Leak channels — all observed in practice, not hypothetical:
 | `git config credential.helper` change, repo-local helper, `GIT_ASKPASS` | Can silently bypass the store and prompt or write elsewhere | Keep the global helper; set `GIT_TERMINAL_PROMPT=0` for non-interactive runs |
 | `git -c credential.helper='store --file=...'` while testing | **Appends** to the helper chain instead of replacing it; `reject`/`approve` are sent to *every* helper, so a test `reject` erases the real entry too | Isolate with `GIT_CONFIG_GLOBAL=/dev/null` and a temp file, or back up `~/.config/git/credentials` first |
 
-`stty -echo` in `install-token.sh` only stops the characters appearing on screen.
+`stty -echo` in `scripts/install-token.sh` only stops the characters appearing on screen.
 It does not protect the token from `ps`, `/proc`, shell tracing, or any process
 running as uid 1000 — the file is plaintext by design (that is what git's `store`
 helper is).

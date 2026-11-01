@@ -11,9 +11,9 @@
 # only format `git credential-store` can read back.
 set -eu
 
-# get container repo location
+# Resolve the repository root (the parent of this script's directory).
 self=$(readlink -f -- "$0" 2>/dev/null || printf '%s\n' "$0")
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$self")" && pwd)
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$self")/.." && pwd)
 
 CREDENTIALS="${GITCONFIG:-$repo_dir/.config/git}/credentials"
 user="${GITHUB_USER:-}"
